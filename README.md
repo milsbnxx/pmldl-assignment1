@@ -1,128 +1,170 @@
-# PMLDL Assignment 1 — Automated MLOps Pipeline
+# PMLDL Assignment 1 — MLOps Pipeline
 
-This repository implements the three required assignment stages:
+This project implements a simple end-to-end MLOps pipeline for a binary classification problem.
 
-1. **Data Engineering** — load raw data, handle missing values, remove outliers, split into train/test, save processed files.
-2. **Model Engineering** — standardize selected features, train a logistic-regression classifier, evaluate it, save metrics and the trained model.
-3. **Deployment** — run a FastAPI model API and a Streamlit web application in **separate Docker containers**.
+The model is trained on the Breast Cancer Wisconsin dataset from scikit-learn. The goal of the model is to predict whether a tumor is benign or malignant based on numerical features.
 
-Apache Airflow orchestrates the complete pipeline every 5 minutes.
+The project includes data processing, model training and evaluation, deployment with FastAPI and Streamlit, Docker containers, and pipeline automation with Apache Airflow.
 
-## Dataset
-
-The project uses the **Breast Cancer Wisconsin Diagnostic dataset distributed with scikit-learn**. A CSV copy is committed at `data/raw/breast_cancer.csv`, so Stage 1 always starts from a raw file artifact.
-
-This dataset is not one of the two datasets prohibited by the assignment.
-
-## Repository structure
+## Project structure
 
 ```text
 .
 ├── code
-│   ├── datasets/prepare_data.py
-│   ├── models/train_model.py
+│   ├── datasets
+│   │   └── prepare_data.py
+│   ├── models
+│   │   └── train_model.py
 │   └── deployment
 │       ├── api
-│       │   ├── Dockerfile
 │       │   ├── main.py
-│       │   └── requirements.txt
+│       │   └── Dockerfile
 │       └── app
-│           ├── Dockerfile
 │           ├── app.py
-│           └── requirements.txt
+│           └── Dockerfile
 ├── data
-│   ├── raw/breast_cancer.csv
-│   └── processed/
-├── models/model.joblib
-├── metrics/metrics.json
-├── scripts/verify_deployment.py
-├── services/airflow/dags/mlops_pipeline.py
+│   ├── raw
+│   │   └── breast_cancer.csv
+│   └── processed
+│       ├── train.csv
+│       ├── test.csv
+│       └── data_report.json
+├── models
+│   └── model.joblib
+├── metrics
+│   └── metrics.json
+├── services
+│   └── airflow
+│       └── dags
+│           └── mlops_pipeline.py
 ├── docker-compose.yml
+├── requirements.txt
+├── requirements-airflow.txt
 ├── setup_project.sh
 ├── setup_airflow.sh
 ├── run_pipeline.sh
-└── run_airflow.sh
+├── run_airflow.sh
+└── README.md
 ```
 
-## Prerequisites
+## Dataset
 
-- macOS/Linux
-- Python **3.10–3.13** (Python 3.13 is recommended)
-- Docker Desktop
+The project uses the Breast Cancer Wisconsin dataset available in `scikit-learn`.
 
-On macOS:
+The original dataset contains 569 rows and 30 numerical features.
 
-```bash
-brew install python@3.13
+During the data engineering stage:
+
+- the data is loaded from `data/raw/breast_cancer.csv`;
+- missing values are handled;
+- extreme outliers are removed using the IQR method;
+- the data is split into training and testing sets.
+
+After preprocessing, the current split contains approximately:
+
+- 410 training rows;
+- 103 testing rows.
+
+## Model
+
+The model is a Logistic Regression classifier.
+
+Before training, all numerical features are standardized using `StandardScaler`.
+
+The scaler and the classifier are stored together in a scikit-learn Pipeline, which is then saved to:
+
+```text
+models/model.joblib
 ```
 
-## 1. Set up the ML project
+The following metrics are calculated on the test set:
+
+- Accuracy
+- Precision
+- Recall
+- F1-score
+- ROC-AUC
+
+The latest metrics are stored in:
+
+```text
+metrics/metrics.json
+```
+
+The model currently achieves around 0.99 accuracy and a recall close to 1.0.
+
+## Deployment
+
+The model is exposed through a FastAPI service.
+
+The web interface is implemented with Streamlit.
+
+They run in separate Docker containers and communicate with each other through Docker Compose.
+
+After starting the project:
+
+FastAPI documentation is available at:
+
+```text
+http://localhost:8000/docs
+```
+
+Streamlit application is available at:
+
+```text
+http://localhost:8501
+```
+
+The Streamlit app allows the user to enter feature values and receive a prediction from the model API.
+
+## Running the project
+
+Make sure Python and Docker Desktop are installed.
+
+First, create the project environment:
 
 ```bash
 ./setup_project.sh
 ```
 
-This creates `.venv` using a supported Python version and installs the ML dependencies.
-
-## 2. Start Docker Desktop
-
-Open Docker Desktop and wait until the Docker engine is running. Check:
-
-```bash
-docker info
-```
-
-## 3. Test the complete pipeline without Airflow
+Then start the complete pipeline:
 
 ```bash
 ./run_pipeline.sh
 ```
 
-The script runs data processing, model training/evaluation, Docker deployment, and health checks.
+This script:
 
-Open:
+1. processes the dataset;
+2. trains and evaluates the model;
+3. saves the trained model and metrics;
+4. builds the Docker images;
+5. starts the API and Streamlit containers;
+6. checks that the services are available.
 
-- FastAPI docs: http://localhost:8000/docs
-- Streamlit app: http://localhost:8501
-
-Check containers:
+You can check the running containers with:
 
 ```bash
 docker compose ps
 ```
 
-Both `pmldl_assignment_api` and `pmldl_assignment_app` should be running.
-
-Stop deployment:
+To stop them:
 
 ```bash
 docker compose down
 ```
 
-## 4. Install Airflow
+## Airflow
 
-```bash
-./setup_airflow.sh
+Apache Airflow is used to automate the pipeline.
+
+Airflow has a DAG called:
+
+```text
+pmldl_mlops_pipeline
 ```
 
-Airflow is installed in a **separate** `.airflow-venv` so it does not conflict with the ML project environment.
-
-## 5. Run Airflow
-
-Keep Docker Desktop running, then:
-
-```bash
-./run_airflow.sh
-```
-
-Open:
-
-- Airflow UI: http://localhost:8080
-- DAG: `pmldl_mlops_pipeline`
-
-Airflow standalone prints the generated admin password in the terminal.
-
-The DAG is scheduled every five minutes and contains:
+The DAG contains the following tasks:
 
 ```text
 stage_1_data_engineering
@@ -134,61 +176,39 @@ stage_3_deployment
 verify_deployment
 ```
 
-The Docker build uses normal Docker layer caching. The first build can take a few minutes because dependencies are downloaded; later builds should be much faster unless requirements change.
+The pipeline is scheduled to run every 5 minutes.
 
-## Outputs
-
-Stage 1 creates:
-
-- `data/processed/train.csv`
-- `data/processed/test.csv`
-- `data/processed/data_report.json`
-
-Stage 2 creates:
-
-- `models/model.joblib`
-- `metrics/metrics.json`
-
-Stage 3 creates two running services:
-
-- API container on port `8000`
-- Streamlit container on port `8501`
-
-## Useful troubleshooting
-
-### `docker compose ps` shows only the app
-
-Inspect all containers and API logs:
+To install Airflow:
 
 ```bash
-docker compose ps -a
-docker compose logs api --tail=100
+./setup_airflow.sh
 ```
 
-### Docker is installed but Airflow deployment fails
-
-Verify Docker Desktop is running:
+To start it:
 
 ```bash
-docker info
+./run_airflow.sh
 ```
 
-### Airflow does not support Python 3.14
+The Airflow interface is available at:
 
-Use Python 3.13:
-
-```bash
-brew install python@3.13
-PYTHON_BIN=python3.13 ./setup_airflow.sh
+```text
+http://localhost:8080
 ```
 
-## Submission
+The generated admin password is printed in the terminal when Airflow starts.
 
-Submit the link to the **public GitHub repository**. During the TA demonstration, show:
+## Technologies
 
-1. the Airflow DAG and successful task run;
-2. processed train/test artifacts;
-3. saved metrics and model;
-4. two running Docker containers;
-5. FastAPI `/docs`;
-6. a prediction made from the Streamlit application.
+The main tools used in this project are:
+
+- Python
+- pandas
+- scikit-learn
+- FastAPI
+- Streamlit
+- Docker
+- Docker Compose
+- Apache Airflow
+
+
