@@ -1,0 +1,17 @@
+{
+  "raw_rows": 569,
+  "clean_rows": 513,
+  "removed_rows": 56,
+  "train_rows": 410,
+  "test_rows": 103,
+  "number_of_features": 30,
+  "iqr_multiplier": 3.0,
+  "target_distribution_train": {
+    "0": 138,
+    "1": 272
+  },
+  "target_distribution_test": {
+    "0": 35,
+    "1": 68
+  }
+}

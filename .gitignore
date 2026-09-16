@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+.airflow-venv/
+venv/
+
+# macOS
+.DS_Store
+
+# Airflow local files
+services/airflow/logs/
+services/airflow/airflow.db
+services/airflow/*.db
+services/airflow/*password*
+services/airflow/simple_auth_manager_passwords.json
+
+# IDE
+.idea/
+.vscode/
+
+# Logs / temp
+*.log
+*.tmp

@@ -1,0 +1,12 @@
+.git
+.venv
+.airflow-venv
+__pycache__
+*.pyc
+.DS_Store
+services/airflow/logs
+services/airflow/airflow.db
+services/airflow/airflow.cfg
+data/processed
+metrics
+README.md
